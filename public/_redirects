@@ -1,0 +1,12 @@
+# Cloudflare Pages SPA fallback
+#
+# This rewrites every path to /index.html so the client-side router
+# can take over. Pages Functions (under /api/*) have higher priority
+# than _redirects, so the /api/health and /api/generate-content
+# functions will still be served by their dedicated handlers, not
+# rewritten to index.html.
+#
+# Format reference:
+#   https://developers.cloudflare.com/pages/configuration/redirects/
+
+/*    /index.html   200
