@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  body {
+    margin: 0;
+    background: #F8F7FC;
+    color: #1F1827;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  /* ── Card Shadows ── */
+  .shadow-card {
+    box-shadow: 0 4px 6px -1px rgba(31, 24, 39, 0.07), 0 2px 4px -2px rgba(31, 24, 39, 0.05);
+  }
+  .shadow-card-lg {
+    box-shadow: 0 10px 15px -3px rgba(31, 24, 39, 0.08), 0 4px 6px -4px rgba(31, 24, 39, 0.04);
+  }
+  .shadow-card-xl {
+    box-shadow: 0 20px 25px -5px rgba(31, 24, 39, 0.08), 0 8px 10px -6px rgba(31, 24, 39, 0.04);
+  }
+  .shadow-accent {
+    box-shadow: 0 4px 16px rgba(255, 140, 66, 0.35);
+  }
+  .shadow-primary {
+    box-shadow: 0 4px 16px rgba(138, 101, 255, 0.3);
+  }
+  .shadow-primary-lg {
+    box-shadow: 0 8px 24px rgba(138, 101, 255, 0.35);
+  }
+
+  /* ── Focus Glow ── */
+  .focus-primary-glow:focus {
+    border-color: #8A65FF;
+    box-shadow: 0 0 0 3px rgba(138, 101, 255, 0.15);
+  }
+
+  /* ── Scrollbar hide ── */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ── No tap highlight ── */
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Backgrounds ── */
+  .bg-main {
+    background: #F8F7FC;
+  }
+  .bg-card {
+    background: #FFFFFF;
+  }
+  .bg-dark-card {
+    background: #0F0A1A;
+  }
+
+  /* ── Gradients ── */
+  .gradient-primary {
+    background: linear-gradient(135deg, #8A65FF 0%, #7C3AED 100%);
+  }
+  .gradient-accent {
+    background: linear-gradient(135deg, #FF8C42 0%, #FF9347 100%);
+  }
+  .gradient-primary-vertical {
+    background: linear-gradient(180deg, #8A65FF 0%, #7C3AED 100%);
+  }
+  .gradient-experience-card {
+    background: linear-gradient(160deg, #8A65FF 0%, #6366F1 50%, #4F46E5 100%);
+  }
+  .gradient-profile-hero {
+    background: linear-gradient(180deg, #8A65FF 0%, #7C3AED 60%, #F8F7FC 100%);
+  }
+
+  /* ── Canvas drawing cursor ── */
+  .drawing-canvas {
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  /* ── Modal animations ── */
+  @keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes modalSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(138, 101, 255, 0.3);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(138, 101, 255, 0.5);
+}
