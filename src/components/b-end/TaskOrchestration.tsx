@@ -6,12 +6,14 @@ import { Icon } from "../Icon";
 import { presetTasks, createEmptyTask, TASK_TYPE_META } from '../../data/defaults';
 import { aiGenerateCustomPrompt, aiApplyIdeaToTask } from '../../services/api';
 import type { TaskContent, TaskType } from '../../types';
+import CheckinTask from '../c-end/tasks/CheckinTask';
+import PhotoTask from '../c-end/tasks/PhotoTask';
+import FindObjectTask from '../c-end/tasks/FindObjectTask';
+import MessageTask from '../c-end/tasks/MessageTask';
+import DrawingTask from '../c-end/tasks/DrawingTask';
 
 /* ── Inline SVG Icons ── */
 
-function ChevronLeftIcon({ className = '', size = 24, color = '#1F1827' }: { className?: string; size?: number; color?: string }) {
-  return <Icon name="chevron-left" size={size} color={color} className={className} decorative />;
-}
 
 function CloseIcon({ size = 16, color = '#6B7280' }: { size?: number; color?: string }) {
   return <Icon name="close" size={size} color={color} decorative />;
@@ -24,7 +26,7 @@ function CloseIcon({ size = 16, color = '#6B7280' }: { size?: number; color?: st
  */
 const TASK_TYPE_IMAGES: Record<TaskType, { src: string; gradient: string; tint: string }> = {
   checkin: {
-    src: '/images/tea-1.jpg',
+    src: '/images/task-checkin.jpg',
     gradient: 'linear-gradient(135deg, #8A65FF 0%, #7C3AED 100%)',
     tint: 'rgba(138, 101, 255, 0.18)',
   },
@@ -34,17 +36,17 @@ const TASK_TYPE_IMAGES: Record<TaskType, { src: string; gradient: string; tint: 
     tint: 'rgba(255, 140, 66, 0.18)',
   },
   findObject: {
-    src: '/images/tea-2.jpg',
+    src: '/images/task-find-object.jpg',
     gradient: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
     tint: 'rgba(16, 185, 129, 0.18)',
   },
   message: {
-    src: '/images/tea-3.jpg',
+    src: '/images/task-message.jpg',
     gradient: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
     tint: 'rgba(245, 158, 11, 0.18)',
   },
   drawing: {
-    src: '/images/experience-card-hero.jpg',
+    src: '/images/task-drawing.jpg',
     gradient: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)',
     tint: 'rgba(236, 72, 153, 0.18)',
   },
@@ -71,554 +73,102 @@ function ChevronDownIcon({ size = 12, color = '#9CA3AF' }: { size?: number; colo
 // are reflected live without clicking "save" or running AI generation.
 
 function TaskPreview({ draft }: { draft: TaskContent }) {
-  // Per-type visual gradient (matches the C-end task cards)
-  const previewGradient: Record<TaskType, string> = {
-    checkin: 'linear-gradient(135deg, #8A65FF 0%, #7C3AED 100%)',
-    photo: 'linear-gradient(135deg, #FF8C42 0%, #FF6A00 100%)',
-    findObject: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-    message: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    drawing: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)',
-  };
-  const previewImage: Record<TaskType, string> = {
-    checkin: '/images/tea-1.jpg',
-    photo: '/images/tea-shop-scene.jpg',
-    findObject: '/images/tea-shop-scene.jpg',
-    message: '/images/tea-3.jpg',
-    drawing: '/images/experience-card-hero.jpg',
-  };
+  /* ── WYSIWYG preview for the B-end ──
+   *
+   * Renders the *real* C-end task component (the same JSX a user
+   * would see on their phone) so the organizer can verify the
+   * user experience while editing.
+   *
+   * Mechanics:
+   *   1. Temporarily swap state.tasks to [draft] and reset
+   *      currentTaskIndex to 0 so the C-end component's derived
+   *      currentTask reads our draft.
+   *   2. Render the matching C-end task component (CheckinTask,
+   *      PhotoTask, …) inside a PhoneShell, with a no-op
+   *      onComplete so the user can't actually advance state.
+   *   3. Restore the previous tasks + index in a cleanup so the
+   *      B-end isn't left in a polluted state.
+   *
+   * Per project rule, the C-end TaskHeader is part of the actual
+   * user view and IS still rendered — we just removed the B-end's
+   * previous bespoke "preview hero strip" that duplicated it. The
+   * C-end body now speaks for itself. */
 
-  // Per-type icon: real PNG paths (no emoji) so the B-end task
-  // cards look as professional as the C-end's PNG-based task
-  // header. Image-only enforcement per project convention.
-  const typeIcon: Record<TaskType, string> = {
-    checkin: '/images/glyph-checkin.png',
-    photo: '/images/glyph-photo.png',
-    findObject: '/images/glyph-find.png',
-    message: '/images/glyph-message.png',
-    drawing: '/images/glyph-drawing.png',
+  const { state, setTasks, setCurrentTask } = useApp();
+  const [activeDraft, setActiveDraft] = useState<TaskContent>(draft);
+
+  useEffect(() => { setActiveDraft(draft); }, [draft]);
+
+  useEffect(() => {
+    const prevTasks = state.tasks;
+    const prevIndex = state.currentTaskIndex;
+    setTasks([draft]);
+    setCurrentTask(0);
+    return () => {
+      setTasks(prevTasks);
+      setCurrentTask(prevIndex);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    draft.type,
+    draft.label,
+    draft.description,
+    draft.promptHint,
+    draft.npcWelcome,
+    draft.npcFarewell,
+  ]);
+
+  const renderTaskBody = () => {
+    const noop = () => undefined;
+    switch (activeDraft.type) {
+      case 'checkin':
+        return <CheckinTask onComplete={noop} />;
+      case 'photo':
+        return <PhotoTask onComplete={noop} />;
+      case 'findObject':
+        return <FindObjectTask onComplete={noop} />;
+      case 'message':
+        return <MessageTask onComplete={noop} compact />;
+      case 'drawing':
+        return <DrawingTask onComplete={noop} />;
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="flex flex-col h-full bg-main">
-      {/* Hero strip with type badge (no status bar — this is a preview, not a real phone) */}
+    /* Simulated iPhone viewport (360×640) for the B-end preview.
+       We give the C-end task component a fixed pixel viewport so:
+         - h-full in MessageTask resolves to 640px (a real phone)
+         - mt-auto on the submit button pins it to the bottom
+         - the message task's own overflow-y-auto handles overflow
+       This matches what a real C-end user sees on their phone.
+       The outer white card scales the 360px down via maxWidth:100%
+       if the modal viewport is narrower. */
+    <div
+      className="h-full w-full overflow-hidden flex items-stretch justify-center p-2"
+      style={{ background: '#FBF3E0' }}
+    >
       <div
-        className="relative mx-2 rounded-xl overflow-hidden shrink-0"
-        style={{ height: 76, background: previewGradient[draft.type] }}
+        style={{
+          width: 360,
+          maxWidth: '100%',
+          height: 640,
+          maxHeight: '100%',
+          aspectRatio: '9 / 16',
+          background: '#FBF3E0',
+          borderRadius: 16,
+          boxShadow: '0 4px 18px rgba(31, 24, 39, 0.10)',
+          overflow: 'hidden',
+          display: 'flex',
+        }}
       >
-        <img
-          src={previewImage[draft.type]}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ filter: 'saturate(1.1) brightness(0.85)' }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(180deg, rgba(31,24,39,0.25) 0%, rgba(31,24,39,0.6) 100%)',
-          }}
-        />
-        <div className="relative z-10 flex items-center gap-1.5 px-2.5 pt-2">
-          <div
-            className="w-5 h-5 rounded-md flex items-center justify-center text-[11px]"
-            style={{ background: 'rgba(255,255,255,0.92)' }}
-          >
-            <img
-              aria-hidden
-              src={typeIcon[draft.type]}
-              alt=""
-              draggable={false}
-              style={{ width: 22, height: 22, objectFit: 'contain' }}
-            />
-          </div>
-          <span
-            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-            style={{ background: 'rgba(255,255,255,0.92)', color: '#1F1827' }}
-          >
-            {TASK_TYPE_META[draft.type].label}
-          </span>
-        </div>
-        <div className="relative z-10 px-2.5 mt-1.5">
-          <h4
-            className="text-[12px] font-bold text-white leading-tight truncate"
-            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}
-          >
-            {draft.label || TASK_TYPE_META[draft.type].label}
-          </h4>
-        </div>
-      </div>
-
-      {/* Body — varies by task type, mimicking the C-end task views */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide px-2.5 py-2 space-y-2">
-        {/* Task description */}
-        <p className="text-[10px] text-ink-secondary leading-relaxed">
-          {draft.description || (
-            <span className="italic opacity-60">任务描述未填写,用户将看到此处</span>
-          )}
-        </p>
-
-        {/* NPC welcome card — shared across all task types */}
-        <div
-          className="rounded-lg p-1.5 flex items-start gap-1.5"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 140, 66, 0.08) 0%, rgba(245, 158, 11, 0.06) 100%)',
-          }}
-        >
-          <img
-            src="/images/npc-avatar.jpg"
-            alt="NPC"
-            className="w-5 h-5 rounded-full object-cover shrink-0"
-          />
-          <p className="text-[9.5px] text-ink-body leading-snug">
-            {draft.npcWelcome || (
-              <span className="italic opacity-60">NPC 开场白未填写</span>
-            )}
-          </p>
-        </div>
-
-        {/* Per-type interactive area */}
-        {draft.type === 'checkin' && (
-          <div className="bg-white rounded-lg p-2.5 flex flex-col items-center">
-            <div className="relative w-12 h-12 flex items-center justify-center mb-1.5">
-              <span className="absolute w-10 h-10 rounded-full border-2 border-primary-500/60 animate-pulse-ring" />
-              <img
-                aria-hidden
-                src="/images/glyph-checkin.png"
-                alt=""
-                draggable={false}
-                style={{ width: 24, height: 24, objectFit: 'contain' }}
-              />
-            </div>
-            <p className="text-[9px] text-ink-secondary mb-1.5">
-              {draft.promptHint}
-            </p>
-            <button
-              className="w-full py-1.5 rounded-full text-[10px] font-semibold text-white"
-              style={{ background: 'linear-gradient(135deg, #FF8C42, #FF9347)' }}
-            >
-              模拟签到
-            </button>
-          </div>
-        )}
-
-        {draft.type === 'photo' && (
-          <div className="bg-white rounded-lg p-2.5">
-            <div
-              className="w-full h-16 rounded-md flex items-center justify-center mb-1.5"
-              style={{
-                background:
-                  'linear-gradient(135deg, rgba(255, 140, 66, 0.12) 0%, rgba(138, 101, 255, 0.08) 100%)',
-              }}
-            >
-              <img
-                aria-hidden
-                src="/images/glyph-photo.png"
-                alt=""
-                draggable={false}
-                style={{ width: 36, height: 36, objectFit: 'contain' }}
-              />
-            </div>
-            <p className="text-[9px] text-ink-secondary mb-1.5 text-center">
-              {draft.promptHint || '选择一张照片,AI 将为你实时点评'}
-            </p>
-            <button
-              className="w-full py-1.5 rounded-full text-[10px] font-semibold text-white"
-              style={{ background: 'linear-gradient(135deg, #FF8C42, #FF9347)' }}
-            >
-              拍照 / 选图
-            </button>
-          </div>
-        )}
-
-        {draft.type === 'findObject' && (
-          <div className="bg-white rounded-lg p-2.5">
-            <div
-              className="w-full h-16 rounded-md mb-1.5 relative overflow-hidden"
-              style={{ background: previewImage[draft.type] }}
-            >
-              <img
-                src={previewImage.findObject}
-                alt=""
-                className="w-full h-full object-cover"
-                style={{ filter: 'saturate(0.9) brightness(0.9)' }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <img
-                  aria-hidden
-                  src="/images/glyph-find.png"
-                  alt=""
-                  draggable={false}
-                  style={{ width: 28, height: 28, objectFit: 'contain' }}
-                />
-              </div>
-            </div>
-            <p className="text-[9px] text-ink-secondary">
-              {draft.promptHint || '仔细观察场景图,点击你认为是目标物体的位置'}
-            </p>
-          </div>
-        )}
-
-        {draft.type === 'message' && (
-          // Two-stage preview: the left half shows the input state
-          // (so the organizer can clearly see "this is where the user
-          // types"); the right half shows the post-submit bulletin
-          // board. An arrow chip in the middle marks the transition.
-          <div
-            className="flex items-stretch gap-1.5 rounded-md p-1.5"
-            style={{
-              background:
-                'linear-gradient(180deg, #FAFAF7 0%, #F4F1EA 100%)',
-              border: '1px solid #E5E7EB',
-            }}
-          >
-            {/* ── Left: input state ── */}
-            <div className="flex-1 min-w-0 flex flex-col gap-1">
-              <p className="text-[8px] font-bold text-ink-secondary uppercase tracking-wider">
-                ① 用户输入
-              </p>
-              <div
-                className="rounded-md px-1.5 py-1 text-[8.5px] text-ink-disabled"
-                style={{
-                  background: '#FFFFFF',
-                  border: '1.5px solid #FF8C42',
-                  boxShadow: '0 0 0 2px rgba(255, 140, 66, 0.15)',
-                }}
-              >
-                {draft.promptHint || '写下你的寄语(5-50 字)'}
-              </div>
-              <div className="flex items-center justify-between px-0.5">
-                <span className="text-[7.5px] text-ink-secondary">
-                  5–50 字
-                </span>
-                <span
-                  className="text-[7.5px] font-semibold tabular-nums"
-                  style={{ color: '#FF8C42' }}
-                >
-                  {Math.min(50, (draft.promptHint?.length ?? 0))} / 50
-                </span>
-              </div>
-              <button
-                className="w-full py-1 rounded-full text-[8.5px] font-semibold text-white"
-                style={{ background: 'linear-gradient(135deg, #FF8C42, #FF9347)' }}
-              >
-                贴上留言墙
-              </button>
-            </div>
-
-            {/* ── Middle: transition arrow ── */}
-            <div className="flex flex-col items-center justify-center shrink-0 w-3.5">
-              <div
-                className="rounded-full w-3.5 h-3.5 flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, #FF8C42, #FF9347)',
-                  boxShadow: '0 1px 3px rgba(255,140,66,0.35)',
-                }}
-              >
-                <span
-                  className="text-white font-bold leading-none"
-                  style={{ fontSize: '7px' }}
-                >
-                  →
-                </span>
-              </div>
-            </div>
-
-            {/* ── Right: bulletin board (post-submit) ── */}
-            <div
-              className="flex-1 min-w-0 flex flex-col gap-0.5"
-            >
-              <p className="text-[8px] font-bold text-amber-700 uppercase tracking-wider">
-                ② 上墙后
-              </p>
-              <div
-                className="relative flex-1 rounded-md overflow-hidden"
-                style={{
-                  minHeight: 96,
-                  background:
-                    'linear-gradient(180deg, #E8D7B8 0%, #D9C29B 100%)',
-                  boxShadow:
-                    'inset 0 0 0 1px rgba(120, 90, 50, 0.15), 0 3px 8px rgba(120, 90, 50, 0.18)',
-                }}
-              >
-                {/* Paper grain */}
-                <div
-                  aria-hidden
-                  className="absolute inset-0 opacity-50 pointer-events-none"
-                  style={{
-                    backgroundImage:
-                      'radial-gradient(rgba(120, 90, 50, 0.18) 1px, transparent 1px)',
-                    backgroundSize: '5px 5px',
-                  }}
-                />
-                {/* User's note — peach, top-left, the visual focus */}
-                <div
-                  className="absolute rounded-sm px-1.5 py-1"
-                  style={{
-                    left: '6%',
-                    top: '12%',
-                    width: '64%',
-                    background:
-                      'linear-gradient(160deg, #FFE5C2 0%, #FFCB94 100%)',
-                    boxShadow:
-                      '0 3px 8px rgba(255, 138, 56, 0.32), inset 0 0 0 1px rgba(255,255,255,0.35)',
-                    transform: 'rotate(-4deg)',
-                    zIndex: 5,
-                  }}
-                >
-                  <img
-                    src="/images/pin-cork.jpg"
-                    alt=""
-                    aria-hidden
-                    className="absolute pointer-events-none select-none"
-                    style={{
-                      top: -3.5,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: 8,
-                      height: 8,
-                      objectFit: 'cover',
-                    }}
-                    draggable={false}
-                  />
-                  <p
-                    className="text-[8.5px] font-semibold leading-tight"
-                    style={{
-                      color: '#5C2A0E',
-                      fontFamily:
-                        '"Ma Shan Zheng", "Noto Serif SC", "Songti SC", serif',
-                    }}
-                  >
-                    "{draft.description || '夏天的第一杯柚子茶'}"
-                  </p>
-                  <p
-                    className="text-right mt-0.5 text-[6.5px] font-bold tracking-wider"
-                    style={{ color: '#FF6A00' }}
-                  >
-                    — 你
-                  </p>
-                </div>
-                {/* Ambient note — mint, top-right */}
-                <div
-                  className="absolute rounded-sm px-1 py-0.5"
-                  style={{
-                    right: '3%',
-                    top: '8%',
-                    width: '38%',
-                    background:
-                      'linear-gradient(160deg, #D8F3E1 0%, #B6E5C4 100%)',
-                    boxShadow:
-                      '0 2px 6px rgba(16, 185, 129, 0.22), inset 0 0 0 1px rgba(255,255,255,0.25)',
-                    transform: 'rotate(5deg)',
-                    zIndex: 3,
-                  }}
-                >
-                  <img
-                    src="/images/pin-cork.jpg"
-                    alt=""
-                    aria-hidden
-                    className="absolute pointer-events-none select-none"
-                    style={{
-                      top: -3,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: 6,
-                      height: 6,
-                      objectFit: 'cover',
-                    }}
-                    draggable={false}
-                  />
-                  <p
-                    className="text-[6.5px] leading-tight"
-                    style={{
-                      color: '#1B4D2E',
-                      fontFamily:
-                        '"Ma Shan Zheng", "Noto Serif SC", "Songti SC", serif',
-                    }}
-                  >
-                    "今天的风是柚子味的"
-                  </p>
-                  <p
-                    className="text-right text-[5.5px] font-bold tracking-wider"
-                    style={{ color: '#10B981' }}
-                  >
-                    — K.
-                  </p>
-                </div>
-                {/* Ambient note — lavender, bottom */}
-                <div
-                  className="absolute rounded-sm px-1 py-0.5"
-                  style={{
-                    left: '4%',
-                    bottom: '6%',
-                    width: '40%',
-                    background:
-                      'linear-gradient(160deg, #E5DEF6 0%, #CCC1EE 100%)',
-                    boxShadow:
-                      '0 2px 6px rgba(139, 92, 246, 0.22), inset 0 0 0 1px rgba(255,255,255,0.25)',
-                    transform: 'rotate(4deg)',
-                    zIndex: 3,
-                  }}
-                >
-                  <img
-                    src="/images/pin-cork.jpg"
-                    alt=""
-                    aria-hidden
-                    className="absolute pointer-events-none select-none"
-                    style={{
-                      top: -3,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: 6,
-                      height: 6,
-                      objectFit: 'cover',
-                    }}
-                    draggable={false}
-                  />
-                  <p
-                    className="text-[6.5px] leading-tight"
-                    style={{
-                      color: '#3A2A6B',
-                      fontFamily:
-                        '"Ma Shan Zheng", "Noto Serif SC", "Songti SC", serif',
-                    }}
-                  >
-                    "把夏天存进这杯茶里"
-                  </p>
-                  <p
-                    className="text-right text-[5.5px] font-bold tracking-wider"
-                    style={{ color: '#8B5CF6' }}
-                  >
-                    — 阿橘
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {draft.type === 'drawing' && (
-          // Mirrors the C-end DrawingTask 1:1: a real canvas-shaped
-          // drawing area + the 7-color palette + 4-step brush-size
-          // selector + clear button + submit button. Sizes are scaled
-          // down to fit the preview viewport, but the visual language
-          // (white card, dashed pink guide for the canvas, pink CTA)
-          // matches exactly so the organizer can read the actual UX
-          // at a glance.
-          <div className="bg-white rounded-lg p-2">
-            {/* Drawing surface — same 1.5px dashed pink border and
-                light pink fill as the C-end canvas wrapper. */}
-            <div
-              className="w-full h-14 rounded-md flex items-center justify-center relative"
-              style={{
-                background:
-                  'linear-gradient(135deg, rgba(236, 72, 153, 0.10) 0%, rgba(219, 39, 119, 0.04) 100%)',
-                border: '1.5px dashed rgba(236, 72, 153, 0.3)',
-              }}
-            >
-              <span className="text-[10px] text-ink-disabled italic">
-                {draft.promptHint || '在画板上自由涂鸦'}
-              </span>
-            </div>
-
-            {/* Color palette — same 7 colors as the real task,
-                scaled to 5x5 dots so they fit the preview. */}
-            <div className="flex items-center gap-1.5 justify-center mt-1.5">
-              {[
-                '#FF8C42', '#FFD93D', '#22C55E',
-                '#3B82F6', '#8A65FF', '#EF4444', '#1F1827',
-              ].map((c) => (
-                <span
-                  key={c}
-                  className="rounded-full"
-                  style={{
-                    width: 6,
-                    height: 6,
-                    backgroundColor: c,
-                    // Highlight the first color (orange = default in
-                    // C-end DrawingTask) to signal "current pick".
-                    boxShadow: c === '#FF8C42'
-                      ? '0 0 0 1.5px #FFFFFF, 0 0 0 2.5px #9CA3AF'
-                      : 'none',
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Brush sizes + clear — same layout as the real task. */}
-            <div className="flex items-center gap-1.5 justify-center mt-1.5">
-              {[2, 4, 8, 12].map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full flex items-center justify-center"
-                  style={{
-                    width: 11,
-                    height: 11,
-                    background: s === 4 ? 'rgba(138, 101, 255, 0.12)' : '#F3F4F6',
-                  }}
-                >
-                  <span
-                    className="rounded-full"
-                    style={{
-                      width: s + 1,
-                      height: s + 1,
-                      backgroundColor: '#FF8C42',
-                    }}
-                  />
-                </span>
-              ))}
-              <span className="ml-1 px-1.5 h-4 rounded-full bg-neutral-100 text-neutral-500 text-[7.5px] font-medium flex items-center gap-0.5">
-                <img
-                  aria-hidden
-                  src="/images/glyph-trash.png"
-                  alt=""
-                  draggable={false}
-                  style={{ width: 8, height: 8, objectFit: 'contain' }}
-                />
-                清除
-              </span>
-            </div>
-
-            {/* Submit — same pink→magenta gradient as C-end "完成绘画". */}
-            <button
-              className="w-full mt-1.5 py-1.5 rounded-full text-[9.5px] font-semibold text-white flex items-center justify-center gap-1"
-              style={{ background: 'linear-gradient(135deg, #EC4899, #DB2777)' }}
-            >
-              <img
-                aria-hidden
-                src="/images/glyph-brush.png"
-                alt=""
-                draggable={false}
-                style={{ width: 12, height: 12, objectFit: 'contain' }}
-              />
-              完成绘画
-            </button>
-          </div>
-        )}
-
-        {/* NPC farewell — always visible at the bottom */}
-        <div
-          className="rounded-lg p-1.5 flex items-start gap-1.5"
-          style={{
-            background: 'linear-gradient(135deg, rgba(138, 101, 255, 0.08) 0%, rgba(124, 58, 237, 0.04) 100%)',
-          }}
-        >
-          <img
-            src="/images/npc-avatar.jpg"
-            alt="NPC"
-            className="w-5 h-5 rounded-full object-cover shrink-0"
-          />
-          <p className="text-[9.5px] text-ink-body leading-snug italic opacity-90">
-            {draft.npcFarewell || (
-              <span className="italic opacity-60">NPC 结束语未填写</span>
-            )}
-          </p>
-        </div>
+        <div style={{ width: '100%', height: '100%' }}>{renderTaskBody()}</div>
       </div>
     </div>
   );
 }
 
-/* ── Task Edit Modal ── */
 
 function TaskEditModal({
   task,
@@ -814,22 +364,6 @@ function TaskEditModal({
               }}
             >
               <span
-                className="w-5 h-5 rounded-md flex items-center justify-center text-[11px] shrink-0"
-                style={{
-                  background: formOpen
-                    ? 'linear-gradient(135deg, #8A65FF 0%, #7C3AED 100%)'
-                    : '#E5E7EB',
-                }}
-              >
-                <img
-                  aria-hidden
-                  src="/images/glyph-pencil.png"
-                  alt=""
-                  draggable={false}
-                  style={{ width: 12, height: 12, objectFit: 'contain' }}
-                />
-              </span>
-              <span
                 className="text-[12px] font-bold leading-none"
                 style={{ color: formOpen ? '#7C3AED' : '#6B7280' }}
               >
@@ -999,22 +533,6 @@ function TaskEditModal({
               }}
             >
               <span
-                className="w-5 h-5 rounded-md flex items-center justify-center text-[11px] shrink-0"
-                style={{
-                  background: previewOpen
-                    ? 'linear-gradient(135deg, #8A65FF 0%, #7C3AED 100%)'
-                    : '#E5E7EB',
-                }}
-              >
-                <img
-                  aria-hidden
-                  src="/images/glyph-phone.png"
-                  alt=""
-                  draggable={false}
-                  style={{ width: 12, height: 12, objectFit: 'contain' }}
-                />
-              </span>
-              <span
                 className="text-[12px] font-bold leading-none"
                 style={{ color: previewOpen ? '#7C3AED' : '#6B7280' }}
               >
@@ -1138,10 +656,6 @@ export default function TaskOrchestration() {
     setEditingIndex(null);
   };
 
-  const selectedTypesLabel = state.activityConfig.taskTypes
-    .map((t) => TASK_TYPE_META[t].label)
-    .join(' · ');
-
   /**
    * Hero progress: % of the orchestration done.
    * Counts: every selected task type whose content has at least one
@@ -1172,7 +686,7 @@ export default function TaskOrchestration() {
       <div className="px-3.5 pt-3.5 pb-2 shrink-0">
         <div
           className="relative overflow-hidden"
-          style={{ height: 132, borderRadius: 20 }}
+          style={{ height: 80, borderRadius: 20 }}
         >
           {/* Background image */}
           <img
@@ -1197,45 +711,35 @@ export default function TaskOrchestration() {
             }}
           />
 
-          {/* Nav row */}
-          <div className="relative z-10 flex items-center gap-2 px-3 pt-2.5">
-            <button
-              onClick={() => setPhase('b-config')}
-              className="w-9 h-9 rounded-full flex items-center justify-center no-tap-highlight transition-colors"
-              style={{
-                background: 'rgba(255, 255, 255, 0.92)',
-                backdropFilter: 'blur(8px)',
-                color: '#1F1827',
-              }}
+          {/* Top row: title (left) + 2/3 step badge (right) on the same line */}
+          <div className="relative z-10 flex items-center justify-between gap-2 px-4 pt-2.5">
+            <h1
+              className="text-[17px] font-bold leading-none text-white"
+              style={{ textShadow: '0 2px 8px rgba(0,0,0,0.18)' }}
             >
-              <ChevronLeftIcon />
-            </button>
-            <div className="flex-1" />
+              任务编排
+            </h1>
             <div
-              className="h-7 px-3 rounded-full flex items-center gap-1.5"
+              className="h-7 px-3 rounded-full flex items-center gap-1.5 shrink-0"
               style={{
                 background: 'rgba(255, 255, 255, 0.92)',
                 backdropFilter: 'blur(8px)',
               }}
             >
-              <SparkleIcon size={11} color="#8A65FF" />
               <span className="text-[11px] font-bold" style={{ color: '#8A65FF' }}>
                 2 / 3
               </span>
             </div>
           </div>
 
-          {/* Title + subtitle + progress */}
-          <div className="relative z-10 px-4 mt-1.5 text-white">
-            <h1 className="text-[19px] font-bold leading-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
-              任务编排
-            </h1>
-            <p className="text-[11px] mt-0.5 opacity-90" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
+          {/* Subtitle + progress — same px-4 so the subtitle aligns with the title */}
+          <div className="relative z-10 px-4 mt-1 text-white">
+            <p className="text-[10.5px] leading-none opacity-90" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
               为活动精心编排每一个互动环节
             </p>
 
             {/* Progress bar */}
-            <div className="mt-2 flex items-center gap-2.5">
+            <div className="mt-1.5 flex items-center gap-2.5">
               <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.25)' }}>
                 <motion.div
                   className="h-full rounded-full"
@@ -1252,37 +756,6 @@ export default function TaskOrchestration() {
           </div>
         </div>
       </div>
-
-      {/* ── Selected task types summary (linked to previous step) ── */}
-      {selectedTypesLabel && (
-        <div className="px-4 mt-4">
-          <div
-            className="rounded-2xl px-3.5 py-2.5 flex items-center gap-2"
-            style={{
-              background: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
-              border: '1px solid rgba(138, 101, 255, 0.18)',
-            }}
-          >
-            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #8A65FF 0%, #7C3AED 100%)' }}>
-              <SparkleIcon size={11} color="white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-semibold leading-none" style={{ color: '#7C3AED' }}>
-                上一环节已选
-              </p>
-              <p className="text-[12px] font-semibold text-ink-primary leading-tight mt-0.5 truncate">
-                {selectedTypesLabel}
-              </p>
-            </div>
-            <span
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
-              style={{ background: 'white', color: '#8A65FF', boxShadow: '0 1px 2px rgba(138,101,255,0.18)' }}
-            >
-              {tasks.length} 项
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* ── Section header ── */}
       <div className="flex items-center justify-between px-4 mt-5 mb-3">
@@ -1389,18 +862,41 @@ export default function TaskOrchestration() {
         })}
       </div>
 
-      {/* ── Bottom area: Next button only (AI generation lives in the edit modal) ── */}
+      {/* ── Bottom area: 上一步 / 下一步 ── */}
       <div className="sticky bottom-0 bg-main px-4 pt-4 pb-4 mt-4">
-        {/* Next button (orange) */}
-        <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleNext}
-          className="w-full h-12 rounded-md font-semibold text-base text-white shadow-accent no-tap-highlight flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, #FF8C42, #FF9347)' }}
-        >
-          下一步
-        </motion.button>
+        <div className="flex items-center gap-2">
+          {/* 上一步 — back to BEndConfig */}
+          <motion.button
+            type="button"
+            onClick={() => setPhase('b-config')}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            className="shrink-0 rounded-md font-semibold text-sm no-tap-highlight transition-all flex items-center justify-center"
+            style={{
+              height: 48,
+              width: 96,
+              background: '#FFFFFF',
+              color: '#7B3F0F',
+              border: '1.5px solid rgba(123, 63, 15, 0.18)',
+              boxShadow: '0 4px 12px rgba(31, 24, 39, 0.06)',
+              cursor: 'pointer',
+            }}
+            aria-label="返回上一步"
+          >
+            上一步
+          </motion.button>
+
+          {/* 下一步 — primary action */}
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleNext}
+            className="flex-1 h-12 rounded-md font-semibold text-base text-white shadow-accent no-tap-highlight flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #FF8C42, #FF9347)' }}
+          >
+            下一步
+          </motion.button>
+        </div>
       </div>
 
       {/* ── Task Edit Modal ── */}

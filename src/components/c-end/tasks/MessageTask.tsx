@@ -2,11 +2,45 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useApp } from '../../../context/AppContext';
 import TaskHeader from './TaskHeader';
+import { StickyNote, type NotePalette } from './StickyNote';
 import { generateCoCreatedStory, polishMessage } from '../../../services/api';
+
+/* Pulse-border keyframes for the AI 润色 button and the
+   user's own sticky note. The same "pulsing amber ring"
+   visual language is shared between the affordance (button)
+   and the surface it acts on (centrepiece note) so the user
+   reads them as a paired interactive unit. */
+const PULSE_STYLE = `
+@keyframes mt-shimmer-border {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 140, 66, 0.55), 0 0 12px 0 rgba(255, 140, 66, 0.35); }
+  50%  { box-shadow: 0 0 0 4px rgba(255, 140, 66, 0.20), 0 0 18px 2px rgba(255, 140, 66, 0.55); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 140, 66, 0.55), 0 0 12px 0 rgba(255, 140, 66, 0.35); }
+}
+.mt-shimmer-border {
+  animation: mt-shimmer-border 1.6s ease-in-out infinite;
+}
+@keyframes mt-note-glow {
+  0%   { box-shadow: 0 14px 30px rgba(255, 138, 56, 0.30), 0 0 0 0 rgba(255, 140, 66, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.35); }
+  50%  { box-shadow: 0 14px 30px rgba(255, 138, 56, 0.30), 0 0 0 6px rgba(255, 140, 66, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.35); }
+  100% { box-shadow: 0 14px 30px rgba(255, 138, 56, 0.30), 0 0 0 0 rgba(255, 140, 66, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.35); }
+}
+.mt-note-glow {
+  animation: mt-note-glow 1.6s ease-in-out infinite;
+}
+`;
+function ShimmerStyles() {
+  return <style dangerouslySetInnerHTML={{ __html: PULSE_STYLE }} />;
+}
 import type { TaskResult } from '../../../types';
 
 interface Props {
   onComplete: (result: TaskResult) => void;
+  /** When true (B-end preview inside a 360×640 mock), skip the
+      tall TaskHeader banner so the bulletin board has room to
+      breathe. The textarea + submit button are also collapsed
+      into a compact strip, leaving the wall as the dominant
+      visual — exactly the surface the organizer needs to see. */
+  compact?: boolean;
 }
 
 // ── Decorative "other visitors" notes that surround the user's
@@ -15,30 +49,22 @@ interface Props {
 // community feed — so we don't need backend storage for them. They
 // serve a UX purpose: giving the user's note context and a sense of
 // being "added to a wall", rather than floating alone in white space.
+// Shorter, more poetic lines so each note fits 1–2 lines and
+// the wall never feels crowded. Authors are single-token names.
 const AMBIENT_NOTES: Array<{ author: string; text: string; palette: NotePalette }> = [
-  { author: '阿橘', text: '第一口的柚子茶,是夏天给的最温柔的拥抱。', palette: 'mint' },
-  { author: 'K.',    text: '今天的风,闻起来是柚子味的。', palette: 'lavender' },
-  { author: '小满',  text: '在这家店把时间按下暂停键', palette: 'butter' },
-  { author: '丘丘',  text: '续杯的理由:第二杯半价,和心情也好。', palette: 'sky' },
+  { author: '阿橘', text: '第一口的夏天，是柚子味的。', palette: 'mint' },
+  { author: 'K.',   text: '风很轻，茶刚好。',           palette: 'lavender' },
+  { author: '小满', text: '把时间，按下暂停键。',     palette: 'butter' },
 ];
 
-type NotePalette = 'peach' | 'mint' | 'lavender' | 'butter' | 'sky';
-
-const NOTE_PALETTE: Record<
-  NotePalette,
-  { bg: string; ink: string; pin: string; shadow: string }
-> = {
-  // The user's own note — warmest tone, sits at the visual center.
-  peach:    { bg: 'linear-gradient(160deg, #FFE5C2 0%, #FFCB94 100%)', ink: '#5C2A0E', pin: '#FF6A00', shadow: '0 14px 30px rgba(255, 138, 56, 0.30)' },
-  mint:     { bg: 'linear-gradient(160deg, #D8F3E1 0%, #B6E5C4 100%)', ink: '#1B4D2E', pin: '#10B981', shadow: '0 12px 26px rgba(16, 185, 129, 0.22)' },
-  lavender: { bg: 'linear-gradient(160deg, #E5DEF6 0%, #CCC1EE 100%)', ink: '#3A2A6B', pin: '#8B5CF6', shadow: '0 12px 26px rgba(139, 92, 246, 0.22)' },
-  butter:   { bg: 'linear-gradient(160deg, #FFF1B8 0%, #FFE28A 100%)', ink: '#5C3D0A', pin: '#F59E0B', shadow: '0 12px 26px rgba(245, 158, 11, 0.22)' },
-  sky:      { bg: 'linear-gradient(160deg, #D4ECFB 0%, #AEDBF4 100%)', ink: '#0F3A5C', pin: '#3B82F6', shadow: '0 12px 26px rgba(59, 130, 246, 0.22)' },
-};
-
-export default function MessageTask({ onComplete }: Props) {
+export default function MessageTask({
+  onComplete,
+  compact = false,
+}: Props) {
   const { state } = useApp();
-  const [text, setText] = useState('');
+  // Demo: prefill the textarea so the user has a starting point and
+  // can tap "贴上留言墙" without typing. They can also edit freely.
+  const [text, setText] = useState('柚子茶的第一口夏天，从这一杯开始。');
   const [polishing, setPolishing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [justPolished, setJustPolished] = useState(false);
@@ -48,8 +74,7 @@ export default function MessageTask({ onComplete }: Props) {
   // note as the centerpiece, and the "next" CTA still works without
   // the parent having to round-trip through the experience card.
   const [submitted, setSubmitted] = useState<
-    | { userMessage: string; coCreatedStory?: string }
-    | null
+    { userMessage: string; coCreatedStory?: string } | null
   >(null);
 
   const isValid = text.trim().length >= 5 && text.trim().length <= 50;
@@ -102,31 +127,126 @@ export default function MessageTask({ onComplete }: Props) {
     }
   };
 
-  // ── Submitted view: bulletin board ──
-  if (submitted) {
-    return <MessageBoardView note={submitted} />;
-  }
+  // No more view-switching: the user can see both the input
+  // textarea and the sticky-note wall at the same time. Whatever
+  // they type in the textarea is rendered live as the centrepiece
+  // note in the wall, so the relationship between "input" and
+  // "wall placement" is immediately visible. Submitting just marks
+  // the note as officially pinned (subtle visual confirmation).
+  // The user's note is the centrepiece of the wall. It binds
+  // directly to `text` so the moment the user types on the
+  // sticky note, every other consumer (the CTA validation,
+  // the AI-polish affordance, the experience card) sees the
+  // updated value. If the field is empty we fall back to a
+  // hand-picked default so the wall never looks blank.
+  const liveMessage = text.trim() || '柚子茶的第一口夏天，从这一杯开始。';
 
   return (
-    <div className="flex flex-col h-full p-3 overflow-y-auto scrollbar-hide">
-      <TaskHeader type="message" />
+    <div className={`flex flex-col h-full ${compact ? 'p-2 overflow-hidden' : 'p-3 overflow-y-auto'} scrollbar-hide`}>
+      {!compact && <TaskHeader type="message" />}
 
-      {/* Input card */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="rounded-2xl shadow-card p-3 mb-3 shrink-0"
-        style={{ background: '#FFFFFF' }}
-      >
-        <div className="flex items-center justify-between mb-2 px-1">
-          <p className="text-xs font-semibold text-ink-secondary uppercase tracking-wider">写下你的夏日寄语</p>
+      {/* The wall is the only surface — the user types directly
+          on the centrepiece note, no separate textarea card. */}
+      <MessageBoardView
+        note={{ userMessage: liveMessage }}
+        live
+        compact={compact}
+        submitted={submitted !== null}
+        onSubmit={handleSubmit}
+        onTextChange={setText}
+        onPolish={handlePolish}
+        polishing={polishing}
+        justPolished={justPolished}
+        canPolish={canPolish}
+        submitting={submitting}
+        isValid={isValid}
+      />
+    </div>
+  );
+}
+
+/* ── Message Board View (post-submit) ──
+ *
+ * Renders the user's just-submitted note as a sticky on a cork-board
+ * background, surrounded by a few ambient notes from other visitors.
+ * The user's note is the visual centerpiece: warmer color, larger
+ * pin, slightly bigger drop shadow.
+ *
+ * The board uses real `img` assets (no SVG decoration) per the
+ * project's hard rule: the wooden pin and string lights are real
+ * AI-generated PNGs under /public/images.
+ */
+function MessageBoardView({
+  note,
+  live = false,
+  compact = false,
+  submitted = false,
+  onSubmit,
+  onTextChange,
+  onPolish,
+  polishing = false,
+  justPolished = false,
+  canPolish = false,
+  submitting = false,
+  isValid = false,
+}: {
+  note: { userMessage: string; coCreatedStory?: string };
+  /** Live mode: textarea content is mirrored into the centrepiece
+      note in real time. Renders the "贴上留言墙" CTA. */
+  live?: boolean;
+  /** B-end 360×640 模拟手机模式：压缩 header 字号，省略 AI
+      润色附文，把所有可用空间让给便签墙。 */
+  compact?: boolean;
+  /** Whether the note has been officially pinned (after submit). */
+  submitted?: boolean;
+  onSubmit?: () => void;
+  /** Edit-on-note: callback for when the user types in the
+      centrepiece note. Bound to the textarea inside StickyNote. */
+  onTextChange?: (v: string) => void;
+  /** AI-polish trigger — wired to the button that replaces the
+      old "实时预览" status chip. */
+  onPolish?: () => void;
+  polishing?: boolean;
+  justPolished?: boolean;
+  canPolish?: boolean;
+  submitting?: boolean;
+  isValid?: boolean;
+}) {
+  return (
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <ShimmerStyles />
+      {/* Header — kept light so the board is the hero. We use
+          `items-center` so the "留言墙" title and the "AI 润色"
+          button sit on the same baseline; the old "YUZU WALL ·
+          2026" sublabel has been removed to give the wall more
+          breathing room. */}
+      <div className={`flex items-center justify-between shrink-0 px-1 ${compact ? 'mb-1' : 'mb-2'}`}>
+        <h3 className={`${compact ? 'text-[12.5px]' : 'text-[15px]'} font-bold text-ink-primary leading-tight`}>
+          {live
+            ? submitted
+              ? '已收录到留言墙'
+              : '留言墙'
+            : '你的留言,已经贴在留言墙上了'}
+        </h3>
+        {/* The right-side header slot is context-sensitive:
+            - after submit  → green "收录成功" status pill
+            - before submit → "AI 润色" button (the same action
+              the old textarea card used to expose, now placed
+              next to the wall because the textarea is gone). */}
+        {submitted ? (
+          <span
+            className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 shrink-0"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            收录成功
+          </span>
+        ) : onPolish ? (
           <motion.button
             type="button"
-            onClick={handlePolish}
+            onClick={onPolish}
             disabled={!canPolish}
             whileTap={canPolish ? { scale: 0.95 } : undefined}
-            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold no-tap-highlight disabled:cursor-not-allowed"
+            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold no-tap-highlight disabled:cursor-not-allowed shrink-0 ${canPolish ? 'mt-shimmer-border' : ''}`}
             style={{
               background: canPolish
                 ? 'linear-gradient(135deg, #FFE4B5 0%, #FFD08A 100%)'
@@ -163,88 +283,10 @@ export default function MessageTask({ onComplete }: Props) {
                 <span>已润色</span>
               </>
             ) : (
-              <>
-                <img
-                  aria-hidden
-                  src="/images/glyph-photo.png"
-                  alt=""
-                  draggable={false}
-                  style={{ width: 16, height: 16, objectFit: 'contain' }}
-                />
-                <span>AI 润色</span>
-              </>
+              <span>AI 润色</span>
             )}
           </motion.button>
-        </div>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="例如：夏天的第一杯柚子茶,酸酸甜甜,像极了青春的味道..."
-          maxLength={50}
-          className="w-full h-24 p-2.5 text-sm text-ink-primary bg-[#F9FAFB] border-0 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/30 placeholder:text-ink-disabled scrollbar-hide"
-        />
-        <div className="flex items-center justify-between mt-1.5 px-1">
-          <span className="text-[10px] text-ink-disabled">最多 50 字</span>
-          <span
-            className="text-[10px] font-semibold tabular-nums"
-            style={{ color: text.length >= 5 ? '#FF8C42' : '#9CA3AF' }}
-          >
-            {text.length} / 50
-          </span>
-        </div>
-      </motion.div>
-
-      {/* Submit button */}
-      <button
-        onClick={handleSubmit}
-        disabled={!isValid || submitting}
-        className="mt-auto rounded-full py-3 font-bold text-sm text-white no-tap-highlight transition-transform shrink-0"
-        style={{
-          background: isValid && !submitting
-            ? 'linear-gradient(135deg, #FF8C42 0%, #FF9347 100%)'
-            : '#E5E7EB',
-          boxShadow: isValid && !submitting ? '0 4px 16px rgba(255, 140, 66, 0.35)' : 'none',
-          opacity: isValid && !submitting ? 1 : 0.6,
-        }}
-      >
-        {submitting ? '正在收录…' : isValid ? '贴上留言墙' : '请至少写 5 个字'}
-      </button>
-    </div>
-  );
-}
-
-/* ── Message Board View (post-submit) ──
- *
- * Renders the user's just-submitted note as a sticky on a cork-board
- * background, surrounded by a few ambient notes from other visitors.
- * The user's note is the visual centerpiece: warmer color, larger
- * pin, slightly bigger drop shadow.
- *
- * The board uses real `img` assets (no SVG decoration) per the
- * project's hard rule: the wooden pin and string lights are real
- * AI-generated PNGs under /public/images.
- */
-function MessageBoardView({
-  note,
-}: {
-  note: { userMessage: string; coCreatedStory?: string };
-}) {
-  return (
-    <div className="flex flex-col h-full p-3 overflow-hidden">
-      {/* Header — kept light so the board is the hero. */}
-      <div className="flex items-center justify-between mb-2 shrink-0 px-1">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600">
-            YUZU WALL · 2026
-          </p>
-          <h3 className="text-[15px] font-bold text-ink-primary leading-tight mt-0.5">
-            你的留言,已经贴在留言墙上了
-          </h3>
-        </div>
-        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          收录成功
-        </span>
+        ) : null}
       </div>
 
       {/* Bulletin board — cork / kraft background with pinned notes. */}
@@ -268,59 +310,83 @@ function MessageBoardView({
           }}
         />
 
-        {/* The user's own note — placed centrally, larger and warm. */}
+        {/* The user's own note — sits front-and-centre as the
+            visual anchor of the wall. We give it 56% width and
+            place it on the left half so the right side has
+            breathing room for the ambient notes. In live mode
+            it becomes the input surface itself — the user types
+            directly on the note via a transparent textarea. */}
         <StickyNote
           text={note.userMessage}
           author="你"
           palette="peach"
-          // Visual position: slightly above center, 1.0 scale (largest).
           x={6}
-          y={4}
-          w={70}
+          y={live ? 14 : 18}
+          w={56}
           rotate={-3}
           emphasis
+          editable={live && !submitted}
+          highlighted={live && !submitted}
+          onChange={onTextChange}
         />
 
-        {/* Ambient notes from other visitors. Positions are tuned so
-            the user's note is clearly the focal point — neighbors are
-            smaller, more colorful, and never overlap the centerpiece. */}
+        {/* Ambient notes from other visitors. We use exactly 3
+            smaller notes arranged in a triangular composition:
+              • top-right
+              • mid-right (under #1)
+              • bottom-left (under the user's note)
+            Each is 30–34% wide, never overlaps the centerpiece,
+            and the board has clear negative space at the corners. */}
         <StickyNote
           text={AMBIENT_NOTES[0].text}
           author={AMBIENT_NOTES[0].author}
           palette={AMBIENT_NOTES[0].palette}
-          x={62}
-          y={2}
-          w={50}
+          x={64}
+          y={6}
+          w={32}
           rotate={4}
         />
         <StickyNote
           text={AMBIENT_NOTES[1].text}
           author={AMBIENT_NOTES[1].author}
           palette={AMBIENT_NOTES[1].palette}
-          x={70}
-          y={42}
-          w={42}
+          x={66}
+          y={live ? 36 : 40}
+          w={30}
           rotate={-5}
         />
         <StickyNote
           text={AMBIENT_NOTES[2].text}
           author={AMBIENT_NOTES[2].author}
           palette={AMBIENT_NOTES[2].palette}
-          x={2}
-          y={48}
-          w={42}
+          x={8}
+          y={live ? 62 : 66}
+          w={30}
           rotate={5}
         />
-        <StickyNote
-          text={AMBIENT_NOTES[3].text}
-          author={AMBIENT_NOTES[3].author}
-          palette={AMBIENT_NOTES[3].palette}
-          x={6}
-          y={72}
-          w={50}
-          rotate={-2}
-        />
       </div>
+
+      {/* Live-mode CTA — the user types in the textarea above and
+          can see the wall update in real time. Hitting this button
+          marks the note as officially pinned (subtle confirmation
+          in the header chip). */}
+      {live && onSubmit && (
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={!isValid || submitting}
+          className="mt-2 rounded-full py-2.5 font-bold text-sm text-white no-tap-highlight transition-transform shrink-0"
+          style={{
+            background: isValid && !submitting
+              ? 'linear-gradient(135deg, #FF8C42 0%, #FF9347 100%)'
+              : '#E5E7EB',
+            boxShadow: isValid && !submitting ? '0 4px 16px rgba(255, 140, 66, 0.35)' : 'none',
+            opacity: isValid && !submitting ? 1 : 0.6,
+          }}
+        >
+          {submitting ? '正在收录…' : submitted ? '已收录到留言墙 ✓' : isValid ? '贴上留言墙' : '请至少写 5 个字'}
+        </button>
+      )}
 
       {/* Footnote — quietly acknowledge the AI co-create. Hidden
           when no story was generated, so the offline path stays clean. */}
@@ -335,99 +401,5 @@ function MessageBoardView({
         </div>
       )}
     </div>
-  );
-}
-
-/* ── Sticky Note ── */
-function StickyNote({
-  text,
-  author,
-  palette,
-  x,
-  y,
-  w,
-  rotate,
-  emphasis,
-}: {
-  text: string;
-  author: string;
-  palette: NotePalette;
-  // Position in % of the board. y is from top, x from left.
-  x: number;
-  y: number;
-  // Width in % of the board.
-  w: number;
-  rotate: number;
-  emphasis?: boolean;
-}) {
-  const p = NOTE_PALETTE[palette];
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30, rotate: 0, scale: 0.9 }}
-      animate={{ opacity: 1, y: 0, rotate, scale: 1 }}
-      transition={{
-        type: 'spring',
-        stiffness: 220,
-        damping: 18,
-        // The user's note lands a hair later so the eye tracks to it.
-        delay: emphasis ? 0.35 : 0.1 + (y % 4) * 0.05,
-      }}
-      className="absolute"
-      style={{
-        left: `${x}%`,
-        top: `${y}%`,
-        width: `${w}%`,
-        zIndex: emphasis ? 5 : 3,
-      }}
-    >
-      <div
-        className="relative rounded-md px-2.5 py-2"
-        style={{
-          background: p.bg,
-          boxShadow: emphasis
-            ? `${p.shadow}, inset 0 0 0 1px rgba(255, 255, 255, 0.35)`
-            : `${p.shadow}, inset 0 0 0 1px rgba(255, 255, 255, 0.25)`,
-        }}
-      >
-        {/* Pin — a real image (no SVG per project rule). Same pin
-            is reused at varying sizes so the visual language stays
-            coherent across all four notes. */}
-        <img
-          src="/images/pin-cork.jpg"
-          alt=""
-          aria-hidden
-          className="absolute pointer-events-none select-none"
-          style={{
-            top: -7,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: emphasis ? 18 : 14,
-            height: emphasis ? 18 : 14,
-            objectFit: 'cover',
-          }}
-          draggable={false}
-        />
-        <p
-          className={
-            emphasis
-              ? 'text-[12.5px] font-semibold leading-snug'
-              : 'text-[11px] leading-snug'
-          }
-          style={{
-            color: p.ink,
-            fontFamily:
-              '"Ma Shan Zheng", "Noto Serif SC", "Songti SC", serif',
-          }}
-        >
-          “{text}”
-        </p>
-        <p
-          className="text-right mt-1 text-[9.5px] font-bold tracking-wider"
-          style={{ color: p.pin }}
-        >
-          — {author}
-        </p>
-      </div>
-    </motion.div>
   );
 }

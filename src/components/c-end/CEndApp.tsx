@@ -144,9 +144,6 @@ function TaskTabContent() {
               <p className="text-[10px] uppercase tracking-wider text-white/80 font-semibold">
                 {npcInfo.name}
               </p>
-              <h3 className="text-sm font-bold text-white truncate">
-                {state.activityConfig.name}
-              </h3>
             </div>
             <div className="text-right shrink-0">
               <div className="text-base font-bold text-white tabular-nums leading-tight">
@@ -167,9 +164,6 @@ function TaskTabContent() {
             style={{ boxShadow: '0 2px 8px rgba(138, 101, 255, 0.25)' }}
           />
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] uppercase tracking-wider text-ink-secondary font-semibold">
-              {state.activityConfig.brandName}
-            </p>
             <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden mt-1.5">
               <div
                 className="h-full rounded-full transition-all duration-500"

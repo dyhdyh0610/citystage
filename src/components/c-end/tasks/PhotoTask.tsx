@@ -72,8 +72,13 @@ export default function PhotoTask({ onComplete }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-full p-3 overflow-y-auto scrollbar-hide">
-      <TaskHeader type="photo" />
+    <div className="flex flex-col h-full p-3 pb-6 overflow-y-auto scrollbar-hide">
+      {/* TaskHeader is only shown in the "select" and "loading"
+          phases. The "result" phase has its own photo-as-hero
+          moment (the user's uploaded shot is the visual focus),
+          so the wooden sign would be redundant and crowd the
+          judging card. */}
+      {phase !== 'result' && <TaskHeader type="photo" />}
 
       <AnimatePresence mode="wait">
         {phase === 'select' && (
@@ -95,7 +100,7 @@ export default function PhotoTask({ onComplete }: Props) {
               className="relative w-full rounded-2xl flex flex-col items-center justify-center gap-2 mb-3 shrink-0 transition-colors"
               style={{
                 background: 'linear-gradient(145deg, #FAFAFA 0%, #F4F4F5 100%)',
-                height: 132,
+                height: 110,
                 boxShadow:
                   '6px 6px 14px rgba(0, 0, 0, 0.05), ' +
                   '-4px -4px 10px rgba(255, 255, 255, 0.9), ' +
@@ -112,33 +117,30 @@ export default function PhotoTask({ onComplete }: Props) {
                     '-2px -2px 4px rgba(255, 255, 255, 0.9), ' +
                     'inset 0 1px 2px rgba(255, 255, 255, 0.8)',
                 }}
-              >
-                <img
-                  aria-hidden
-                  src="/images/glyph-photo.png"
-                  alt=""
-                  draggable={false}
-                  style={{ width: 26, height: 26, objectFit: 'contain' }}
-                />
-              </div>
+              />
               <p className="text-[15px] font-semibold text-ink-primary tracking-wide">点击上传照片</p>
               <p className="text-[11px] text-ink-secondary">支持 JPG / PNG · 单张 ≤ 10MB</p>
             </motion.button>
 
-            {/* Album strip — three pre-loaded sample photos to "upload" */}
+            {/* Album strip — three pre-loaded sample photos to "upload".
+                We constrain each cell to a fixed 110×110 square so the
+                row never grows to fill the flex column and push the
+                submit button off-screen. */}
             <div className="flex items-center justify-between mb-2 px-1 shrink-0">
               <p className="text-sm font-semibold text-ink-primary">从相册选择</p>
               <p className="text-[10px] text-ink-tertiary">{samplePhotos.length} 张备选</p>
             </div>
-            <div className="grid grid-cols-3 gap-2 flex-1 min-h-0">
+            <div className="grid grid-cols-3 gap-1.5 justify-items-center shrink-0">
               {samplePhotos.map((photo, idx) => (
                 <motion.button
                   key={photo.id}
                   whileTap={{ scale: 0.96 }}
                   whileHover={{ y: -2 }}
                   onClick={() => setSelectedPhoto(idx)}
-                  className="relative aspect-square rounded-xl overflow-hidden shadow-card bg-white"
+                  className="relative rounded-xl overflow-hidden shadow-card bg-white"
                   style={{
+                    width: 86,
+                    height: 86,
                     outline: selectedPhoto === idx ? '3px solid #FF8C42' : '2px solid transparent',
                     outlineOffset: selectedPhoto === idx ? '-2px' : '0',
                     transition: 'outline 0.15s',
@@ -187,7 +189,7 @@ export default function PhotoTask({ onComplete }: Props) {
             <button
               onClick={handleConfirm}
               disabled={selectedPhoto === null}
-              className="mt-3 rounded-full py-2.5 font-bold text-sm text-white no-tap-highlight transition-transform shrink-0"
+              className="mt-2 rounded-full py-2.5 font-bold text-sm text-white no-tap-highlight transition-transform shrink-0"
               style={{
                 background: selectedPhoto !== null
                   ? 'linear-gradient(135deg, #FF8C42 0%, #FF9347 100%)'
@@ -196,7 +198,7 @@ export default function PhotoTask({ onComplete }: Props) {
                 opacity: selectedPhoto !== null ? 1 : 0.6,
               }}
             >
-              {selectedPhoto !== null ? '上传并获取 AI 点评' : '请先选择照片'}
+              {selectedPhoto !== null ? '上传并获取点评' : '请先选择照片'}
             </button>
           </motion.div>
         )}
@@ -373,7 +375,7 @@ export default function PhotoTask({ onComplete }: Props) {
                   photoData,
                 })
               }
-              className="mt-3 rounded-full py-3 font-bold text-sm text-white no-tap-highlight transition-transform hover:scale-105 active:scale-95 shrink-0"
+              className="mt-2 rounded-full py-3 font-bold text-sm text-white no-tap-highlight transition-transform hover:scale-105 active:scale-95 shrink-0"
               style={{
                 background: 'linear-gradient(135deg, #FF8C42 0%, #FF9347 100%)',
                 boxShadow: '0 4px 16px rgba(255, 140, 66, 0.35)',

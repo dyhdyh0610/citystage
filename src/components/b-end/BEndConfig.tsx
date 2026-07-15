@@ -11,14 +11,21 @@ import {
 } from '../../data/defaults';
 import type { TaskType } from '../../types';
 
-/* ── Real-image task type icons (replacing emoji) ── */
-
+/* ── Real-image task type icons (replacing emoji) ──
+    Each image is a real photograph that matches the task's
+    activity semantics:
+      checkin      →  pin (location marker) on a tea shop
+      photo        →  tea shop scene with the new product
+      findObject   →  small yuzu mascot hidden on a counter
+      message      →  cozy message wall with sticky notes
+      drawing      →  overhead sketchbook drawing the mascot
+*/
 const TASK_TYPE_IMAGES: Record<TaskType, string> = {
-  checkin: '/images/tea-1.jpg',
+  checkin: '/images/task-checkin.jpg',
   photo: '/images/tea-shop-scene.jpg',
-  findObject: '/images/tea-shop-scene.jpg',
-  message: '/images/tea-3.jpg',
-  drawing: '/images/experience-card-hero.jpg',
+  findObject: '/images/task-find-object.jpg',
+  message: '/images/task-message.jpg',
+  drawing: '/images/task-drawing.jpg',
 };
 
 /* ── Compact UI Icons (small, used inside inputs).
@@ -28,40 +35,8 @@ const TASK_TYPE_IMAGES: Record<TaskType, string> = {
  * and looks professional. The `size` and `color` props keep the
  * original API surface so call sites don't have to change. */
 
-function ChevronLeftIcon({ size = 22, color = '#1F1827' }: { size?: number; color?: string }) {
-  return <Icon name="chevron-left" size={size} color={color} decorative />;
-}
-
-function SparkleIcon({ size = 14, color = '#8A65FF' }: { size?: number; color?: string }) {
-  return <Icon name="sparkle" size={size} color={color} decorative />;
-}
-
-function PinIcon({ size = 16, color = '#8A65FF' }: { size?: number; color?: string }) {
-  return <Icon name="pin" size={size} color={color} decorative />;
-}
-
-function ClockIcon({ size = 16, color = '#8A65FF' }: { size?: number; color?: string }) {
-  return <Icon name="clock" size={size} color={color} decorative />;
-}
-
-function UsersIcon({ size = 16, color = '#8A65FF' }: { size?: number; color?: string }) {
-  return <Icon name="users" size={size} color={color} decorative />;
-}
-
-function TagIcon({ size = 16, color = '#8A65FF' }: { size?: number; color?: string }) {
-  return <Icon name="tag" size={size} color={color} decorative />;
-}
-
 function CheckIcon({ size = 12 }: { size?: number }) {
   return <Icon name="check" size={size} color="#FFFFFF" decorative />;
-}
-
-function ChevronDownIcon({ size = 16, color = '#9CA3AF' }: { size?: number; color?: string }) {
-  return <Icon name="chevron-down" size={size} color={color} decorative />;
-}
-
-function ArrowRightIcon({ size = 18 }: { size?: number }) {
-  return <Icon name="arrow-right" size={size} color="#1F1827" decorative />;
 }
 
 /* ── Floating Label Input ── */
@@ -76,9 +51,10 @@ interface FloatingInputProps {
   type?: 'text';
   icon?: React.ReactNode;
   maxLength?: number;
+  onFocus?: () => void;
 }
 
-function FloatingInput({ label, value, onChange, placeholder, required, optional, icon, maxLength }: FloatingInputProps) {
+function FloatingInput({ label, value, onChange, placeholder, required, optional, icon, maxLength, onFocus }: FloatingInputProps) {
   const [focused, setFocused] = useState(false);
   const hasValue = value.length > 0;
   const lifted = focused || hasValue;
@@ -105,7 +81,10 @@ function FloatingInput({ label, value, onChange, placeholder, required, optional
           type="text"
           value={value}
           maxLength={maxLength}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            onFocus?.();
+          }}
           onBlur={() => setFocused(false)}
           onChange={(e) => onChange(e.target.value)}
           placeholder={lifted ? placeholder : ''}
@@ -164,9 +143,10 @@ interface PillSelectorProps {
   onChange: (v: string) => void;
   required?: boolean;
   icon?: React.ReactNode;
+  onOpen?: () => void;
 }
 
-function PillSelector({ label, value, options, onChange, required, icon }: PillSelectorProps) {
+function PillSelector({ label, value, options, onChange, required, icon, onOpen }: PillSelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -183,7 +163,11 @@ function PillSelector({ label, value, options, onChange, required, icon }: PillS
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) onOpen?.();
+        }}
         className="w-full h-14 rounded-2xl border bg-white text-left transition-all flex items-center no-tap-highlight"
         style={{
           borderColor: open ? '#8A65FF' : 'rgba(31, 24, 39, 0.08)',
@@ -201,9 +185,7 @@ function PillSelector({ label, value, options, onChange, required, icon }: PillS
             {value || <span className="text-ink-disabled">请选择</span>}
           </p>
         </div>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }} className="pr-3.5">
-          <ChevronDownIcon />
-        </motion.div>
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }} className="pr-3.5" />
       </button>
 
       <AnimatePresence>
@@ -377,6 +359,23 @@ export default function BEndConfig() {
   const config = state.activityConfig;
 
   /**
+   * Demo-mode toast. Any time the organizer focuses an editable
+   * field or opens a selector, we surface a soft "demo" hint that
+   * auto-dismisses after 2.5s. We use a ref-based counter so
+   * consecutive focuses don't reset the timer mid-fade.
+   */
+  const [demoToast, setDemoToast] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showDemoToast = () => {
+    setDemoToast(true);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setDemoToast(false), 2500);
+  };
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+  }, []);
+
+  /**
    * Hero progress: % of basic-info fields the user has filled out.
    * Counts: name, location, time, audience (any), taskTypes (any).
    * Each worth 20%. Clamped 0–100.
@@ -427,7 +426,7 @@ export default function BEndConfig() {
       <div className="px-3.5 pt-3.5 pb-2 shrink-0">
         <div
           className="relative overflow-hidden"
-          style={{ height: 132, borderRadius: 20 }}
+          style={{ height: 80, borderRadius: 20 }}
         >
           {/* Background image */}
           <img
@@ -452,45 +451,35 @@ export default function BEndConfig() {
             }}
           />
 
-          {/* Nav row */}
-          <div className="relative z-10 flex items-center gap-2 px-3 pt-2.5">
-            <button
-              onClick={() => setPhase('c-app')}
-              className="w-9 h-9 rounded-full flex items-center justify-center no-tap-highlight transition-colors"
-              style={{
-                background: 'rgba(255, 255, 255, 0.92)',
-                backdropFilter: 'blur(8px)',
-                color: '#1F1827',
-              }}
+          {/* Top row: title (left) + 1/3 step badge (right) on the same line */}
+          <div className="relative z-10 flex items-center justify-between gap-2 px-4 pt-2.5">
+            <h1
+              className="text-[17px] font-bold leading-none text-white"
+              style={{ textShadow: '0 2px 8px rgba(0,0,0,0.18)' }}
             >
-              <ChevronLeftIcon />
-            </button>
-            <div className="flex-1" />
+              活动基础信息
+            </h1>
             <div
-              className="h-7 px-3 rounded-full flex items-center gap-1.5"
+              className="h-7 px-3 rounded-full flex items-center gap-1.5 shrink-0"
               style={{
                 background: 'rgba(255, 255, 255, 0.92)',
                 backdropFilter: 'blur(8px)',
               }}
             >
-              <SparkleIcon size={11} color="#8A65FF" />
-              <span className="text-[11px] font-bold" style={{ color: '#8A65FF' }}>
+              <span className="text-[11px] font-bold" style={{ color: '#6B46C1' }}>
                 1 / 3
               </span>
             </div>
           </div>
 
-          {/* Title + subtitle + progress */}
-          <div className="relative z-10 px-4 mt-1.5 text-white">
-            <h1 className="text-[19px] font-bold leading-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
-              活动基础信息
-            </h1>
-            <p className="text-[11px] mt-0.5 opacity-90" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
+          {/* Subtitle + progress — same px-4 so the subtitle aligns with the title */}
+          <div className="relative z-10 px-4 mt-1 text-white">
+            <p className="text-[10.5px] leading-none opacity-90" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
               填写活动核心信息，AI 将智能推荐玩法
             </p>
 
             {/* Progress bar */}
-            <div className="mt-2 flex items-center gap-2.5">
+            <div className="mt-1.5 flex items-center gap-2.5">
               <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.25)' }}>
                 <motion.div
                   className="h-full rounded-full"
@@ -520,12 +509,6 @@ export default function BEndConfig() {
             style={{ boxShadow: '0 4px 16px rgba(31, 24, 39, 0.05), 0 0 0 1px rgba(31, 24, 39, 0.04)' }}
           >
             <div className="flex items-center gap-2 pb-1">
-              <div
-                className="w-6 h-6 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #8A65FF 0%, #7C3AED 100%)' }}
-              >
-                <TagIcon size={13} color="white" />
-              </div>
               <h2 className="text-[14px] font-bold text-ink-primary">核心信息</h2>
               <span
                 className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded"
@@ -543,8 +526,8 @@ export default function BEndConfig() {
               }}
               placeholder="如：夏日新品探鲜季"
               required
-              icon={<TagIcon size={16} color={config.name ? '#8A65FF' : '#9CA3AF'} />}
               maxLength={20}
+              onFocus={showDemoToast}
             />
 
             <FloatingInput
@@ -553,8 +536,8 @@ export default function BEndConfig() {
               onChange={(v) => updateActivityConfig({ brandName: v })}
               placeholder="如：柚见茶铺"
               optional
-              icon={<SparkleIcon size={15} color={config.brandName ? '#8A65FF' : '#9CA3AF'} />}
               maxLength={12}
+              onFocus={showDemoToast}
             />
           </motion.section>
 
@@ -567,12 +550,6 @@ export default function BEndConfig() {
             style={{ boxShadow: '0 4px 16px rgba(31, 24, 39, 0.05), 0 0 0 1px rgba(31, 24, 39, 0.04)' }}
           >
             <div className="flex items-center gap-2 pb-1">
-              <div
-                className="w-6 h-6 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #FF8C42 0%, #FF6A00 100%)' }}
-              >
-                <PinIcon size={13} color="white" />
-              </div>
               <h2 className="text-[14px] font-bold text-ink-primary">场景设置</h2>
             </div>
 
@@ -582,7 +559,7 @@ export default function BEndConfig() {
               options={mallLocations}
               onChange={(v) => updateActivityConfig({ location: v })}
               required
-              icon={<PinIcon size={16} color={config.location ? '#8A65FF' : '#9CA3AF'} />}
+              onOpen={showDemoToast}
             />
 
             <PillSelector
@@ -591,7 +568,7 @@ export default function BEndConfig() {
               options={timeOptions}
               onChange={(v) => updateActivityConfig({ time: v })}
               required
-              icon={<ClockIcon size={16} color={config.time ? '#8A65FF' : '#9CA3AF'} />}
+              onOpen={showDemoToast}
             />
           </motion.section>
 
@@ -604,12 +581,6 @@ export default function BEndConfig() {
             style={{ boxShadow: '0 4px 16px rgba(31, 24, 39, 0.05), 0 0 0 1px rgba(31, 24, 39, 0.04)' }}
           >
             <div className="flex items-center gap-2 pb-1">
-              <div
-                className="w-6 h-6 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #8A65FF 0%, #FF8C42 100%)' }}
-              >
-                <UsersIcon size={13} color="white" />
-              </div>
               <h2 className="text-[14px] font-bold text-ink-primary">目标人群</h2>
               <span
                 className="text-[10px] font-medium px-1.5 py-0.5 rounded ml-1"
@@ -648,12 +619,6 @@ export default function BEndConfig() {
             style={{ boxShadow: '0 4px 16px rgba(31, 24, 39, 0.05), 0 0 0 1px rgba(31, 24, 39, 0.04)' }}
           >
             <div className="flex items-center gap-2 pb-1">
-              <div
-                className="w-6 h-6 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #FF8C42 100%)' }}
-              >
-                <SparkleIcon size={12} color="white" />
-              </div>
               <h2 className="text-[14px] font-bold text-ink-primary whitespace-nowrap">任务类型</h2>
               <span
                 className="text-[10px] font-semibold px-1.5 py-0.5 rounded ml-1 whitespace-nowrap"
@@ -680,7 +645,7 @@ export default function BEndConfig() {
         </div>
       </div>
 
-      {/* ── Sticky bottom CTA ── */}
+      {/* ── Sticky bottom CTA (split: 上一步 / 下一步) ── */}
       <div
         className="absolute left-0 right-0 px-4 pt-3 z-20"
         style={{
@@ -690,16 +655,40 @@ export default function BEndConfig() {
           backdropFilter: 'blur(12px)',
         }}
       >
-        <motion.button
-          whileHover={canProceed ? { y: -1 } : {}}
-          whileTap={canProceed ? { scale: 0.98 } : {}}
-          onClick={handleNext}
-          disabled={!canProceed}
-          className="w-full rounded-2xl font-bold text-[15px] no-tap-highlight transition-all flex items-center justify-center gap-2"
-          style={{
-            height: 52,
-            background: canProceed
-              ? 'linear-gradient(135deg, #8A65FF 0%, #7C3AED 50%, #FF8C42 100%)'
+        <div className="flex items-center gap-2">
+          {/* 上一步 */}
+          <motion.button
+            type="button"
+            onClick={() => setPhase('identity')}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            className="shrink-0 rounded-2xl font-bold text-[14px] no-tap-highlight transition-all flex items-center justify-center"
+            style={{
+              height: 52,
+              width: 96,
+              background: '#FFFFFF',
+              color: '#7B3F0F',
+              border: '1.5px solid rgba(123, 63, 15, 0.18)',
+              boxShadow: '0 4px 12px rgba(31, 24, 39, 0.06)',
+              cursor: 'pointer',
+            }}
+            aria-label="返回上一步"
+          >
+            <span>上一步</span>
+          </motion.button>
+
+          {/* 下一步 · AI 编排任务 */}
+          <motion.button
+            type="button"
+            whileHover={canProceed ? { y: -1 } : {}}
+            whileTap={canProceed ? { scale: 0.98 } : {}}
+            onClick={handleNext}
+            disabled={!canProceed}
+            className="flex-1 rounded-2xl font-bold text-[15px] no-tap-highlight transition-all flex items-center justify-center gap-2"
+            style={{
+              height: 52,
+              background: canProceed
+                ? 'linear-gradient(135deg, #8A65FF 0%, #7C3AED 50%, #FF8C42 100%)'
               : '#E5E7EB',
             color: canProceed ? 'white' : '#9CA3AF',
             boxShadow: canProceed
@@ -708,10 +697,40 @@ export default function BEndConfig() {
             cursor: canProceed ? 'pointer' : 'not-allowed',
           }}
         >
-          <span>下一步 · AI 编排任务</span>
-          <ArrowRightIcon size={18} />
+          <span>下一步</span>
         </motion.button>
+        </div>
       </div>
+
+      {/* ── Demo-mode toast ──
+          Auto-dismisses 2.5s after the last focus / open event. */}
+      <AnimatePresence>
+        {demoToast && (
+          <motion.div
+            key="demo-toast"
+            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+            style={{ bottom: 96, maxWidth: 320 }}
+          >
+            <div
+              className="flex items-start gap-2 rounded-2xl px-3 py-2 shadow-card"
+              style={{
+                background: 'rgba(31, 24, 39, 0.92)',
+                color: 'white',
+                backdropFilter: 'blur(6px)',
+              }}
+            >
+              <span className="text-[14px] leading-none mt-0.5">💡</span>
+              <p className="text-[12px] leading-snug">
+                demo 阶段，活动基础信息部分采用预设内容演示
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

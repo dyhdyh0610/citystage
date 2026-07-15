@@ -44,11 +44,11 @@ function PinIcon() {
  * the shop scene for unknown types.
  */
 const taskHeroByType: Record<string, { src: string; alt: string }> = {
-  checkin: { src: '/images/tea-shop-scene.jpg', alt: '柚见茶铺门店' },
-  photo: { src: '/images/youjian-pin.jpg', alt: '柚见·品 静物' },
-  findObject: { src: '/images/tea-shop-scene.jpg', alt: '寻找小柚子' },
-  message: { src: '/images/youjian-pin.jpg', alt: '留言墙静物' },
-  drawing: { src: '/images/tea-shop-scene.jpg', alt: '柚见茶铺场景' },
+  checkin: { src: '/images/task-checkin.jpg', alt: '到店打卡场景' },
+  photo: { src: '/images/tea-shop-scene.jpg', alt: '拍照打卡场景' },
+  findObject: { src: '/images/task-find-object.jpg', alt: '寻找小柚子场景' },
+  message: { src: '/images/task-message.jpg', alt: '留言墙场景' },
+  drawing: { src: '/images/task-drawing.jpg', alt: '画图绘图场景' },
 };
 
 /** Build a formatted summary string of all task results for the experience card AI prompt. */
@@ -248,16 +248,6 @@ export default function TaskFlow() {
     }
   };
 
-  // Progress steps
-  const taskCount = state.tasks.length || 5;
-  const currentStep = state.currentTaskIndex;
-
-  const getStepStatus = (index: number): 'completed' | 'active' | 'locked' => {
-    if (index < currentStep) return 'completed';
-    if (index === currentStep) return 'active';
-    return 'locked';
-  };
-
   return (
     <div
       className="h-full flex flex-col relative"
@@ -291,47 +281,12 @@ export default function TaskFlow() {
         </span>
       </div>
 
-      {/* ── Progress steps ── */}
-      <div className="px-4 py-1.5 shrink-0 border-b border-white/40 backdrop-blur-md" style={{ backgroundColor: 'rgba(255, 255, 255, 0.55)' }}>
-        <div className="flex items-center justify-between">
-          {Array.from({ length: taskCount }).map((_, i) => {
-            const status = getStepStatus(i);
-            return (
-              <div key={i} className="flex items-center flex-1 last:flex-none">
-                <div className="relative flex items-center justify-center">
-                  {status === 'active' && (
-                    <span className="absolute inset-0 rounded-full bg-primary-500/30 animate-pulse-ring" />
-                  )}
-                  <div
-                    className={`relative w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      status === 'completed'
-                        ? 'gradient-primary text-white'
-                        : status === 'active'
-                          ? 'gradient-primary text-white'
-                          : 'bg-neutral-200 text-neutral-400'
-                    }`}
-                    style={
-                      status === 'completed' || status === 'active'
-                        ? { background: 'linear-gradient(135deg, #8A65FF 0%, #7C3AED 100%)' }
-                        : {}
-                    }
-                  >
-                    {status === 'completed' ? <CheckIcon /> : i + 1}
-                  </div>
-                </div>
-                {/* Connector */}
-                {i < taskCount - 1 && (
-                  <div
-                    className={`h-0.5 flex-1 mx-1 rounded-full ${
-                      status === 'completed' ? 'bg-primary-500' : 'bg-neutral-200'
-                    }`}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* Progress steps removed — the dedicated per-step
+          "STEP N · 柚见茶铺" wooden sign in the TaskHeader is
+          enough context for the user, and the in-flow back
+          button + task-body content convey the rest. The old
+          1-2-3-4-5 dot row was visually competing with the
+          hero photo for attention. */}
 
       {/* ── Stage content ── */}
       <div className="flex-1 overflow-y-auto scrollbar-hide">

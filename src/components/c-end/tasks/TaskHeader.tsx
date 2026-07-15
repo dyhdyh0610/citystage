@@ -81,11 +81,11 @@ const TYPE_VISUAL: Record<
 // Default hero image per task type. Chosen to be a real photo
 // (no SVG) that visually fits the activity.
 const DEFAULT_HERO: Record<TaskType, string> = {
-  checkin: '/images/tea-shop-scene.jpg',
-  photo: '/images/youjian-pin.jpg',
-  findObject: '/images/tea-shop-scene.jpg',
-  message: '/images/youjian-pin.jpg',
-  drawing: '/images/tea-shop-scene.jpg',
+  checkin: '/images/task-checkin.jpg',
+  photo: '/images/tea-shop-scene.jpg',
+  findObject: '/images/task-find-object.jpg',
+  message: '/images/task-message.jpg',
+  drawing: '/images/task-drawing.jpg',
 };
 
 const TYPE_NAME: Record<TaskType, string> = {
@@ -167,25 +167,33 @@ export default function TaskHeader({ type, heroSrc, brandLabel = '柚见茶铺' 
         className="relative px-3.5 py-2.5 flex items-center gap-3"
         style={{ background: v.gradient }}
       >
-        {/* Type label — Chinese in serif, the "ink" of the page. */}
+        {/* Type label — Chinese in serif, the "ink" of the page.
+            truncate guarantees the label never wraps, even on the
+            narrower B-end preview window. */}
+        {/* Description — clamp() auto-shrinks the title on narrow
+            B-end preview windows. Default descriptions are <=11
+            Chinese chars, so they fit on one line down to ~320px
+            preview width. `truncate` stays on as a safety net for
+            unusually long user-input drafts. */}
         <div className="flex-1 min-w-0">
           <p
-            className="text-[10px] font-bold uppercase tracking-[0.18em]"
+            className="text-[10px] font-bold uppercase tracking-[0.18em] truncate whitespace-nowrap"
             style={{ color: '#9A3412' }}
           >
             · {TYPE_NAME[type]} ·
           </p>
           <h3
-            className="font-bold text-[15px] leading-snug mt-0.5 truncate"
+            className="font-bold text-[14px] mt-0.5 truncate whitespace-nowrap"
             style={{
               color: '#2A1F0F',
               fontFamily: '"Noto Serif SC", "Songti SC", "STSong", serif',
+              lineHeight: 1.25,
             }}
           >
             {currentTask?.description ?? ''}
           </h3>
           <p
-            className="text-[11px] font-medium mt-0.5"
+            className="text-[10.5px] font-medium mt-0.5 truncate whitespace-nowrap"
             style={{ color: '#7A5C3E' }}
           >
             {v.sub}

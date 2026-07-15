@@ -191,15 +191,8 @@ export default function DrawingTask({ onComplete }: Props) {
                     app's photo / image based icon system. */}
                 <button
                   onClick={handleClear}
-                  className="ml-2 px-3 h-8 rounded-full bg-neutral-100 text-neutral-500 text-xs font-medium flex items-center gap-1.5 no-tap-highlight"
+                  className="ml-2 px-3 h-8 rounded-full bg-neutral-100 text-neutral-500 text-xs font-medium no-tap-highlight"
                 >
-                  <img
-                    aria-hidden
-                    src="/images/glyph-trash.png"
-                    alt=""
-                    draggable={false}
-                    style={{ width: 14, height: 14, objectFit: 'contain' }}
-                  />
                   清除
                 </button>
               </div>
@@ -215,13 +208,6 @@ export default function DrawingTask({ onComplete }: Props) {
                   : 'bg-neutral-100 text-neutral-400'
               }`}
             >
-              <img
-                aria-hidden
-                src="/images/glyph-brush.png"
-                alt=""
-                draggable={false}
-                style={{ width: 18, height: 18, objectFit: 'contain' }}
-              />
               完成绘画
             </button>
           </motion.div>

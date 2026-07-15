@@ -124,7 +124,7 @@ export default function FindObjectTask({ onComplete }: Props) {
           })
         }
         disabled={phase !== 'found'}
-        className="mt-3 rounded-full py-3 font-bold text-sm text-white no-tap-highlight transition-transform shrink-0"
+        className="mt-1 rounded-full py-3 font-bold text-sm text-white no-tap-highlight transition-transform shrink-0"
         style={{
           background: phase === 'found'
             ? 'linear-gradient(135deg, #FF8C42 0%, #FF9347 100%)'

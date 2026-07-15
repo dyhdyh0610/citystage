@@ -31,14 +31,6 @@ function LockIcon() {
   );
 }
 
-function PinIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22S19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9S10.62 6.5 12 6.5S14.5 7.62 14.5 9S13.38 11.5 12 11.5Z" fill="#6B7280" />
-    </svg>
-  );
-}
-
 export default function TaskMap() {
   const {
     state,
@@ -164,35 +156,32 @@ export default function TaskMap() {
       transition={{ duration: 0.4 }}
       className="h-full overflow-y-auto scrollbar-hide bg-main relative"
     >
-      {/* ── Header ── */}
+      {/* ── Floating back button (the title + 0/5 are merged into the hero card) ── */}
       <motion.div
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.05, duration: 0.3 }}
-        className="flex items-center gap-3 px-4 pt-4 pb-3"
+        className="absolute top-3 left-3 z-10"
       >
         <button
           onClick={() => setCView('mall-map')}
           className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center no-tap-highlight transition-colors hover:bg-primary-50 shrink-0"
+          aria-label="返回"
         >
           <BackIcon />
         </button>
-        <h1 className="text-lg font-bold text-ink-primary flex-1">夏日探鲜任务</h1>
-        <span className="text-xs text-ink-secondary font-semibold tabular-nums">
-          {completedCount}/{total}
-        </span>
       </motion.div>
 
-      {/* ── Activity Hero Card ── */}
+      {/* ── Activity Hero Card (title merged into the card) ── */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4 }}
-        className="mx-4 mb-4"
+        className="px-4 pt-3"
       >
         <div className="relative rounded-2xl overflow-hidden shadow-card">
           {/* Hero photo */}
-          <div className="relative w-full h-20 overflow-hidden">
+          <div className="relative w-full h-24 overflow-hidden">
             <img
               src="/images/tea-shop-scene.jpg"
               alt="柚见茶铺门店"
@@ -202,16 +191,33 @@ export default function TaskMap() {
               className="absolute inset-0"
               style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 100%)' }}
             />
-            <span
-              className="absolute top-2 left-2.5 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide backdrop-blur"
-              style={{ backgroundColor: 'rgba(255, 255, 255, 0.92)', color: '#8A65FF' }}
+            {/* Eyebrow title + status merged onto the hero photo.
+                Title sits at the top-right corner so it doesn't
+                collide with the progress count chip at bottom-left
+                and stays out of the way of the storefront scene. */}
+            <div className="absolute top-2.5 left-3 right-3 flex items-start justify-end gap-2">
+              <span
+                className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide backdrop-blur shrink-0"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.92)', color: '#8A65FF' }}
+              >
+                当前活动
+              </span>
+              <h1 className="text-base font-bold text-white leading-tight" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                夏日探鲜任务
+              </h1>
+            </div>
+            {/* Progress count sits on the photo's bottom-left, with a soft chip */}
+            <div
+              className="absolute bottom-2 left-3 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur"
+              style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
             >
-              当前活动
-            </span>
+              <span className="tabular-nums">{completedCount}/{total}</span>
+              <span className="opacity-80">已完成</span>
+            </div>
           </div>
 
           {/* Card body */}
-          <div className="bg-white px-3.5 py-2 flex items-center gap-3">
+          <div className="bg-white px-3.5 py-3 flex items-center gap-3">
             <img
               src="/images/npc-avatar.jpg"
               alt={npcInfo.name}
@@ -222,15 +228,6 @@ export default function TaskMap() {
               <p className="text-[10px] uppercase tracking-wider text-ink-secondary font-semibold">
                 {npcInfo.name}
               </p>
-              <h3 className="text-sm font-bold text-ink-primary truncate">
-                {state.activityConfig.name}
-              </h3>
-              <div className="flex items-center gap-1 mt-0.5">
-                <PinIcon />
-                <span className="text-[11px] text-ink-secondary truncate">
-                  {state.activityConfig.brandName} · {state.activityConfig.location}
-                </span>
-              </div>
             </div>
             <button
               onClick={handlePrimaryCta}

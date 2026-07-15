@@ -73,7 +73,9 @@ export default function CheckinTask({ onComplete }: Props) {
         }}
       />
 
-      <TaskHeader type="checkin" />
+      <div className="px-3 shrink-0">
+        <TaskHeader type="checkin" />
+      </div>
 
       {/* ── Store / status card ──
           Step card design (not the old "left photo + right text"
@@ -136,7 +138,7 @@ export default function CheckinTask({ onComplete }: Props) {
                 it ties to the TaskHeader wooden-sign language.
                 Uses a real PNG of a wooden placard (no emoji). */}
             <span
-              className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-sm pl-1 pr-1.5 py-0.5 text-[9px] font-bold tracking-[0.04em]"
+              className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[9px] font-bold tracking-[0.04em]"
               style={{
                 background: 'rgba(31, 16, 7, 0.86)',
                 color: BRAND.cream,
@@ -144,13 +146,6 @@ export default function CheckinTask({ onComplete }: Props) {
                 backdropFilter: 'blur(2px)',
               }}
             >
-              <img
-                aria-hidden
-                src="/images/glyph-placard.png"
-                alt=""
-                draggable={false}
-                style={{ width: 12, height: 12, objectFit: 'contain' }}
-              />
               本季限定
             </span>
             {/* Photo credit: store name anchored to the bottom-left
@@ -186,13 +181,6 @@ export default function CheckinTask({ onComplete }: Props) {
               className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider shrink-0"
               style={{ color: BRAND.yuzu }}
             >
-              <img
-                aria-hidden
-                src="/images/glyph-lantern.png"
-                alt=""
-                draggable={false}
-                style={{ width: 14, height: 14, objectFit: 'contain' }}
-              />
               柚风冰摇
             </span>
           </div>
@@ -245,10 +233,10 @@ export default function CheckinTask({ onComplete }: Props) {
           The placard is the button — the bell is just visual eye
           candy above it. The bell image already contains its own
           brass hook + string, so we don't need to draw them. */}
-      <div className="px-3 pb-4 shrink-0 flex items-center justify-center relative z-10">
+      <div className="px-3 pb-3 shrink-0 flex items-center justify-center relative z-10 -mt-2">
         <div
           className="relative flex flex-col items-center gap-1.5"
-          style={{ width: 144, height: 230 }}
+          style={{ width: 128, height: 196 }}
         >
           {/* ── Chime ripple: a soft ring that expands once when
                 the user presses the bell. Lives behind everything
@@ -328,9 +316,9 @@ export default function CheckinTask({ onComplete }: Props) {
             transition={{ delay: 0.05, duration: 0.3, ease: 'easeOut' }}
             className="no-tap-highlight rounded-xl flex flex-col items-center justify-center gap-1"
             style={{
-              width: 124,
-              height: 124,
-              padding: '0 10px',
+              width: 96,
+              height: 88,
+              padding: '0 8px',
               // Wood-grain gradient — vertical, with 3 darker
               // bands faking plank seams. Top-lit to match the
               // directional light on the bell.

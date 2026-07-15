@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import type { TaskResult } from '../types';
+import { StickyNote } from './c-end/tasks/StickyNote';
 
 /* ─────────────────────────────────────────────────────────────────
  * 夏日探鲜护照 · Summer Foraging Passport
@@ -472,8 +473,6 @@ export default function ExperienceCard() {
  *   ┌─ header: NO.0X · type ────────────┐
  *   │  body: media + meta + comment      │
  *   └────────────────────────────────────┘
- * No rotation, no border-radius:999 rings, no perforated overlays
- * that could clip into adjacent text.
  * ───────────────────────────────────────────────────────────────── */
 function Card({
   stampNo,
@@ -652,7 +651,11 @@ function FindObjectCard({
   );
 }
 
-/* ── Message card ── */
+/* ── Message card ──
+   Renders the user's note as a sticky note pinned to a cork
+   board, alongside two ambient notes from other visitors.
+   This mirrors the wall the user just saw in the message task
+   so the experience card visually echoes the journey. */
 function MessageCard({
   userMessage,
   coCreatedStory,
@@ -662,36 +665,98 @@ function MessageCard({
   coCreatedStory?: string;
   stampNo: string;
 }) {
+  // A small cast of ambient notes for the cork board. We pick
+  // the same three used in the message task so the card feels
+  // like a snapshot of that wall.
+  const ambient = [
+    { author: '阿橘', palette: 'mint' as const,     text: '第一口的夏天，是柚子味的。' },
+    { author: 'K.',   palette: 'lavender' as const, text: '风很轻，茶刚好。' },
+    { author: '小满', palette: 'butter' as const,   text: '把时间，按下暂停键。' },
+  ];
+
   return (
     <Card stampNo={stampNo} typeLabel="寄语" enLabel="YOUR WORDS">
-      <p
-        className="text-[18px] font-black leading-[1.5]"
+      {/* Cork / kraft board — same outer canvas the user saw
+          while authoring, so the preview reads as the same
+          wall, not a redesigned card. */}
+      <div
+        className="relative w-full overflow-hidden"
         style={{
-          color: INK,
-          fontFamily: "'Noto Serif SC', 'Songti SC', 'STZhongsong', serif",
-          letterSpacing: '0.02em',
+          height: 168,
+          background: 'linear-gradient(180deg, #E8D7B8 0%, #D9C29B 100%)',
+          boxShadow: 'inset 0 0 0 1px rgba(120, 90, 50, 0.18)',
         }}
       >
-        「{userMessage || '（未填）'}」
-      </p>
-      {coCreatedStory && (
+        {/* Cork grain dots */}
         <div
-          className="mt-3 pt-3"
-          style={{ borderTop: `1px dashed ${INK_HAIR}` }}
+          aria-hidden
+          className="absolute inset-0 opacity-50 pointer-events-none"
+          style={{
+            backgroundImage:
+              'radial-gradient(rgba(120, 90, 50, 0.20) 1px, transparent 1px)',
+            backgroundSize: '7px 7px',
+          }}
+        />
+
+        {/* User's note — center, the focal point. Uses the
+            shared StickyNote component (peach palette) so the
+            preview note looks identical to the one the user
+            just authored. */}
+        <StickyNote
+          text={userMessage || '（未填）'}
+          author="你"
+          palette="peach"
+          x={8}
+          y={14}
+          w={56}
+          rotate={-3}
+          emphasis
+          static_
+        />
+
+        {/* Ambient notes — three, matching the authoring wall. */}
+        <StickyNote
+          text={ambient[0].text}
+          author={ambient[0].author}
+          palette={ambient[0].palette}
+          x={64}
+          y={6}
+          w={32}
+          rotate={4}
+          static_
+        />
+        <StickyNote
+          text={ambient[1].text}
+          author={ambient[1].author}
+          palette={ambient[1].palette}
+          x={4}
+          y={64}
+          w={32}
+          rotate={5}
+          static_
+        />
+        <StickyNote
+          text={ambient[2].text}
+          author={ambient[2].author}
+          palette={ambient[2].palette}
+          x={48}
+          y={66}
+          w={30}
+          rotate={-4}
+          static_
+        />
+      </div>
+
+      {/* AI co-created story — only when available. Header
+          label is intentionally omitted here so the card
+          reads as a clean keepsake, not a marketing panel. */}
+      {coCreatedStory && (
+        <p
+          className="mt-3 text-[12px] leading-relaxed italic"
+          style={{ color: INK_SOFT }}
         >
-          <p
-            className="text-[10px] font-mono tracking-[0.25em] uppercase mb-1"
-            style={{ color: INK_SOFT }}
-          >
-            AI · 店长润色
-          </p>
-          <p
-            className="text-[12px] leading-relaxed italic"
-            style={{ color: INK_SOFT }}
-          >
-            {coCreatedStory}
-          </p>
-        </div>
+          {coCreatedStory}
+        </p>
       )}
     </Card>
   );
