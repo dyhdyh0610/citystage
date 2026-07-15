@@ -285,9 +285,6 @@ export default function IdentitySelection() {
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-bold text-primary-600 mb-0.5">
-                        第 2 步 / 共 10 步
-                      </p>
                       <p className="text-xs text-ink-primary leading-relaxed">
                         选择<span className="font-bold text-accent-600 mx-0.5">「企业用户」</span>，以品牌方身份配置并发布活动
                       </p>

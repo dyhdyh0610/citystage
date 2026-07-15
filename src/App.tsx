@@ -44,7 +44,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main content */}
+      {/* Main content. renderContent picks the right page
+          for the current phase — c-splash shows the splash,
+          c-app shows the mall, b-* shows the B-end tool. */}
       <main className="relative z-10 flex-1 flex items-center justify-center min-h-0 py-1">
         <PhoneShell overlay={<Guidance />}>
           {renderContent(state.phase)}

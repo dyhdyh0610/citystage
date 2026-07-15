@@ -338,7 +338,7 @@ function CreatePopup({ onClose }: { onClose: () => void }) {
                     </svg>
                   </div>
                   <p className="text-[11px] text-primary-700 leading-relaxed flex-1">
-                    第 2 步 / 共 10 步 · 选择「<span className="font-bold">企业用户</span>」以品牌方身份配置并发布活动
+                    选择「<span className="font-bold">企业用户</span>」以品牌方身份配置并发布活动
                   </p>
                   <button
                     onClick={dismissHint}
